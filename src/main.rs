@@ -64,6 +64,7 @@ const INDICES: &[u16] = &[0, 1, 2, 1, 3, 2, /* padding */ 0];
 async fn main() {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
+    event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     let window = Window::new(&event_loop).unwrap();
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
@@ -227,15 +228,12 @@ async fn main() {
             log::info!("The close button was pressed; stopping");
             elwt.exit();
         }
-        Event::WindowEvent {
-            event: WindowEvent::RedrawRequested,
-            ..
-        } => {
-            // render stuff
+        Event::AboutToWait => {
             render(
                 &surface,
                 &device,
                 &render_pipeline,
+                &diffuse_texture,
                 &diffuse_bind_group,
                 &vertex_buffer,
                 &index_buffer,
@@ -243,6 +241,10 @@ async fn main() {
                 &queue,
             );
         }
+        Event::WindowEvent {
+            event: WindowEvent::RedrawRequested,
+            ..
+        } => {}
         _ => (),
     });
 }
@@ -251,6 +253,7 @@ fn render(
     surface: &wgpu::Surface,
     device: &wgpu::Device,
     render_pipeline: &wgpu::RenderPipeline,
+    diffuse_texture: &texture::Texture,
     diffuse_bind_group: &wgpu::BindGroup,
     vertex_buffer: &wgpu::Buffer,
     index_buffer: &wgpu::Buffer,
@@ -265,6 +268,28 @@ fn render(
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Render Encoder"),
     });
+
+    let size = wgpu::Extent3d {
+        width: 100,
+        height: 100,
+        depth_or_array_layers: 1,
+    };
+
+    queue.write_texture(
+        wgpu::ImageCopyTexture {
+            aspect: wgpu::TextureAspect::All,
+            texture: &diffuse_texture.texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+        },
+        &gen::get_sin(),
+        wgpu::ImageDataLayout {
+            offset: 0,
+            bytes_per_row: Some(100),
+            rows_per_image: Some(100),
+        },
+        size,
+    );
 
     {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
