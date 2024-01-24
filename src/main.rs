@@ -5,8 +5,8 @@ use winit::{
     window::Window,
 };
 
-mod texture;
 mod gen;
+mod texture;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Zeroable, bytemuck::Pod)]
@@ -219,8 +219,44 @@ async fn main() {
     });
     let num_indices = INDICES.len() as u32;
 
-    // start render
+    let _ = event_loop.run(move |event, elwt| match event {
+        Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } => {
+            log::info!("The close button was pressed; stopping");
+            elwt.exit();
+        }
+        Event::WindowEvent {
+            event: WindowEvent::RedrawRequested,
+            ..
+        } => {
+            // render stuff
+            render(
+                &surface,
+                &device,
+                &render_pipeline,
+                &diffuse_bind_group,
+                &vertex_buffer,
+                &index_buffer,
+                num_indices,
+                &queue,
+            );
+        }
+        _ => (),
+    });
+}
 
+fn render(
+    surface: &wgpu::Surface,
+    device: &wgpu::Device,
+    render_pipeline: &wgpu::RenderPipeline,
+    diffuse_bind_group: &wgpu::BindGroup,
+    vertex_buffer: &wgpu::Buffer,
+    index_buffer: &wgpu::Buffer,
+    num_indices: u32,
+    queue: &wgpu::Queue,
+) {
     let output = surface.get_current_texture().unwrap();
     let view = output
         .texture
@@ -260,21 +296,4 @@ async fn main() {
 
     queue.submit(std::iter::once(encoder.finish()));
     output.present();
-
-    let _ = event_loop.run(move |event, elwt| match event {
-        Event::WindowEvent {
-            event: WindowEvent::CloseRequested,
-            ..
-        } => {
-            log::info!("The close button was pressed; stopping");
-            elwt.exit();
-        }
-        Event::WindowEvent {
-            event: WindowEvent::RedrawRequested,
-            ..
-        } => {
-            // render stuff
-        }
-        _ => (),
-    });
 }
