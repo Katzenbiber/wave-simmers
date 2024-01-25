@@ -6,6 +6,7 @@ use winit::{
 };
 
 mod gen;
+mod simulation;
 mod texture;
 
 #[repr(C)]
@@ -66,6 +67,10 @@ async fn main() {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     let window = Window::new(&event_loop).unwrap();
+    window.request_inner_size(winit::dpi::PhysicalSize {
+        width: 2500,
+        height: 2500,
+    });
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
     let surface = instance.create_surface(&window).unwrap();
@@ -113,7 +118,9 @@ async fn main() {
     };
     surface.configure(&device, &config);
 
+    log::info!("Creating Texture");
     let diffuse_texture = texture::Texture::test_texture(&device, &queue, "test image");
+    log::info!("Created Texture");
 
     let texture_bind_group_layout =
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -220,6 +227,10 @@ async fn main() {
     });
     let num_indices = INDICES.len() as u32;
 
+    log::info!("Creating Simulation");
+    let mut sim = simulation::Simulation::new();
+    log::info!("Created Simulation");
+
     let _ = event_loop.run(move |event, elwt| match event {
         Event::WindowEvent {
             event: WindowEvent::CloseRequested,
@@ -229,12 +240,20 @@ async fn main() {
             elwt.exit();
         }
         Event::AboutToWait => {
+            let field = sim.multi_step(50);
+            let mut casted = vec![0; (simulation::X * simulation::Y) as usize];
+            for (n, node) in field.iter().enumerate() {
+                casted[n] = (node.abs() * 10000.0) as u8;
+            }
+            let casted = casted.into_boxed_slice();
+            log::debug!("energy is: {}", sim.energy());
             render(
                 &surface,
                 &device,
                 &render_pipeline,
                 &diffuse_texture,
                 &diffuse_bind_group,
+                &casted,
                 &vertex_buffer,
                 &index_buffer,
                 num_indices,
@@ -255,6 +274,7 @@ fn render(
     render_pipeline: &wgpu::RenderPipeline,
     diffuse_texture: &texture::Texture,
     diffuse_bind_group: &wgpu::BindGroup,
+    field: &Box<[u8]>,
     vertex_buffer: &wgpu::Buffer,
     index_buffer: &wgpu::Buffer,
     num_indices: u32,
@@ -270,8 +290,8 @@ fn render(
     });
 
     let size = wgpu::Extent3d {
-        width: 100,
-        height: 100,
+        width: simulation::X,
+        height: simulation::Y,
         depth_or_array_layers: 1,
     };
 
@@ -282,11 +302,11 @@ fn render(
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         },
-        &gen::get_sin(),
+        field,
         wgpu::ImageDataLayout {
             offset: 0,
-            bytes_per_row: Some(100),
-            rows_per_image: Some(100),
+            bytes_per_row: Some(simulation::X),
+            rows_per_image: Some(simulation::Y),
         },
         size,
     );

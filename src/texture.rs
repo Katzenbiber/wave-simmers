@@ -1,3 +1,5 @@
+use crate::simulation;
+
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -6,8 +8,8 @@ pub struct Texture {
 
 impl Texture {
     pub fn test_texture(device: &wgpu::Device, queue: &wgpu::Queue, label: &str) -> Self {
-        let data = crate::gen::get_sin();
-        let dimensions = (100, 100);
+        let data = vec![0; (simulation::X * simulation::Y) as usize];
+        let dimensions = (simulation::X, simulation::Y);
 
         let size = wgpu::Extent3d {
             width: dimensions.0,
@@ -34,7 +36,7 @@ impl Texture {
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
-            &data,
+            &*data,
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: Some(1 * dimensions.0),
@@ -59,6 +61,5 @@ impl Texture {
             view,
             sampler,
         }
-
     }
 }
