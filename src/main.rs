@@ -20,7 +20,7 @@ struct Args {
     y: u32,
     #[arg(short, long, default_value_t = 0.01)]
     c: f64,
-    #[arg(short, long, default_value_t = 1.0)]
+    #[arg(short, long, default_value_t = 25.0)]
     init: f64,
 }
 
