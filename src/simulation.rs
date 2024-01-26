@@ -17,11 +17,15 @@ impl Simulation {
         let c = args.c;
 
         let mut field = vec![0.0; (x * y) as usize];
-        field[(x * (y / 2) + x / 2) as usize] = init;
-        field[(x * (y / 2) + x / 2) as usize - 1] = init * 0.5;
-        field[(x * (y / 2) + x / 2) as usize + 1] = init * 0.5;
-        field[(x * (y / 2) + x / 2) as usize - x as usize] = init * 0.5;
-        field[(x * (y / 2) + x / 2) as usize + x as usize] = init * 0.5;
+        let center = (x as i32 / 2, y as i32 / 2);
+        log::debug!("center: {center:?}");
+        for (n, node) in field.iter_mut().enumerate() {
+            let row = n as i32 / x as i32;
+            let col = n as i32 % x as i32;
+            let offset = ((col - center.0) as f64, (row - center.1) as f64);
+
+            *node = Simulation::init_value_gaus(offset, init)
+        }
         let mut field_dot = vec![0.0; (x * y) as usize];
         //field_dot[(x * (y / 2) + x / 2) as usize] = 1.0;
 
@@ -32,7 +36,7 @@ impl Simulation {
             x,
             y,
             c,
-            h: 1.0/x as f64,
+            h: 1.0 / x as f64,
         }
     }
 
@@ -87,5 +91,30 @@ impl Simulation {
 
     pub fn energy(&self) -> f64 {
         self.field.iter().map(|x| x.abs()).sum::<f64>() / (self.x * self.y) as f64
+    }
+
+    fn init_value_gaus(offset: (f64, f64), init: f64) -> f64 {
+        let mu = 0.0;
+        let sigma = 4.0;
+
+        let dist = (offset.0.powi(2) + offset.1.powi(2)).sqrt();
+        let exp = -0.5 * ((dist - mu) / sigma).powi(2);
+        exp.exp() / (sigma * (2.0 * std::f64::consts::PI).sqrt()) * init
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gaus() {
+        let left = (-1.0, 0.0);
+        let right = (1.0, 0.0);
+        let init = 1.0;
+        assert_eq!(
+            Simulation::init_value_gaus(left, init),
+            Simulation::init_value_gaus(right, init)
+        );
     }
 }
