@@ -90,7 +90,10 @@ impl Simulation {
     }
 
     pub fn energy(&self) -> f64 {
-        self.field.iter().map(|x| x.abs()).sum::<f64>() / (self.x * self.y) as f64
+        let pot = self.field.iter().map(|x| x.powi(2)).sum::<f64>() / (self.x * self.y) as f64;
+
+        let kin = self.field_dot.iter().map(|x| x.powi(2)).sum::<f64>() / (self.x * self.y) as f64;
+        pot + kin
     }
 
     fn init_value_gaus(offset: (f64, f64), init: f64) -> f64 {
