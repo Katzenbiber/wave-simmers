@@ -7,9 +7,9 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn test_texture(device: &wgpu::Device, queue: &wgpu::Queue, label: &str) -> Self {
-        let data = vec![0; (simulation::X * simulation::Y) as usize];
-        let dimensions = (simulation::X, simulation::Y);
+    pub fn test_texture(device: &wgpu::Device, queue: &wgpu::Queue, label: &str, dims: (u32, u32)) -> Self {
+        let data = vec![0; (dims.0 * dims.1) as usize];
+        let dimensions = (dims.0, dims.1);
 
         let size = wgpu::Extent3d {
             width: dimensions.0,

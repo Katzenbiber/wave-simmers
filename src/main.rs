@@ -4,10 +4,25 @@ use winit::{
     event_loop::EventLoop,
     window::Window,
 };
+use clap::Parser;
 
 mod gen;
 mod simulation;
 mod texture;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(short, long, default_value_t = 0.0001)]
+    timestep: f64,
+    #[arg(short, long, default_value_t = 100)]
+    x: u32,
+    #[arg(short, long, default_value_t = 100)]
+    y: u32,
+    #[arg(short, long, default_value_t = 0.01)]
+    c: f64,
+    #[arg(short, long, default_value_t = 1.0)]
+    init: f64,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Zeroable, bytemuck::Pod)]
@@ -64,12 +79,13 @@ const INDICES: &[u16] = &[0, 1, 2, 1, 3, 2, /* padding */ 0];
 #[pollster::main]
 async fn main() {
     env_logger::init();
+    let args = Args::parse();
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     let window = Window::new(&event_loop).unwrap();
     window.request_inner_size(winit::dpi::PhysicalSize {
-        width: 2500,
-        height: 2500,
+        width: 1000,
+        height: 1000,
     });
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
@@ -119,7 +135,7 @@ async fn main() {
     surface.configure(&device, &config);
 
     log::info!("Creating Texture");
-    let diffuse_texture = texture::Texture::test_texture(&device, &queue, "test image");
+    let diffuse_texture = texture::Texture::test_texture(&device, &queue, "test image", (args.x, args.y));
     log::info!("Created Texture");
 
     let texture_bind_group_layout =
@@ -228,7 +244,7 @@ async fn main() {
     let num_indices = INDICES.len() as u32;
 
     log::info!("Creating Simulation");
-    let mut sim = simulation::Simulation::new();
+    let mut sim = simulation::Simulation::new(args);
     log::info!("Created Simulation");
 
     let _ = event_loop.run(move |event, elwt| match event {
@@ -240,10 +256,10 @@ async fn main() {
             elwt.exit();
         }
         Event::AboutToWait => {
+            let mut casted = vec![0; (sim.x * sim.y) as usize];
             let field = sim.multi_step(50);
-            let mut casted = vec![0; (simulation::X * simulation::Y) as usize];
             for (n, node) in field.iter().enumerate() {
-                casted[n] = (node.abs() * 10000.0) as u8;
+                casted[n] = (node.abs() * 100.0) as u8;
             }
             let casted = casted.into_boxed_slice();
             log::debug!("energy is: {}", sim.energy());
@@ -254,6 +270,7 @@ async fn main() {
                 &diffuse_texture,
                 &diffuse_bind_group,
                 &casted,
+                (sim.x, sim.y),
                 &vertex_buffer,
                 &index_buffer,
                 num_indices,
@@ -275,6 +292,7 @@ fn render(
     diffuse_texture: &texture::Texture,
     diffuse_bind_group: &wgpu::BindGroup,
     field: &Box<[u8]>,
+    sim_dim: (u32, u32),
     vertex_buffer: &wgpu::Buffer,
     index_buffer: &wgpu::Buffer,
     num_indices: u32,
@@ -290,8 +308,8 @@ fn render(
     });
 
     let size = wgpu::Extent3d {
-        width: simulation::X,
-        height: simulation::Y,
+        width: sim_dim.0,
+        height: sim_dim.1,
         depth_or_array_layers: 1,
     };
 
@@ -305,8 +323,8 @@ fn render(
         field,
         wgpu::ImageDataLayout {
             offset: 0,
-            bytes_per_row: Some(simulation::X),
-            rows_per_image: Some(simulation::Y),
+            bytes_per_row: Some(sim_dim.0),
+            rows_per_image: Some(sim_dim.1),
         },
         size,
     );
