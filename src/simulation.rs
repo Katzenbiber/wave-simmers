@@ -50,36 +50,9 @@ impl Simulation {
     pub fn step(&mut self) -> &Vec<f64> {
         let field_dot = self.field_dot.clone();
         for (n, node) in self.field.clone().iter().enumerate() {
-            let left;
-            if n as u32 % self.x == 0 {
-                left = 0.0;
-            } else {
-                left = self.field[n - 1];
-            }
-
-            let right;
-            if n as u32 % self.x == self.x - 1 {
-                right = 0.0;
-            } else {
-                right = self.field[n + 1];
-            }
+            let (left, right, top, bottom) = self.get_star(n);
 
             let u_ddx = (left - 2.0 * *node + right) / self.h.powi(2);
-
-            let top;
-            if n as u32 / self.x == 0 {
-                top = 0.0;
-            } else {
-                top = self.field[n - self.x as usize];
-            }
-
-            let bottom;
-            if n as u32 / self.x == self.y - 1 {
-                bottom = 0.0;
-            } else {
-                bottom = self.field[n + self.x as usize];
-            }
-
             let u_ddy = (top - 2.0 * *node + bottom) / self.h.powi(2);
 
             let u_ddot = self.c.powi(2) * (u_ddx + u_ddy);
@@ -90,10 +63,15 @@ impl Simulation {
     }
 
     pub fn energy(&self) -> f64 {
-        let pot = self.field.iter().map(|x| x.powi(2)).sum::<f64>() / (self.x * self.y) as f64;
-
-        let kin = self.field_dot.iter().map(|x| x.powi(2)).sum::<f64>() / (self.x * self.y) as f64;
-        pot + kin
+        let mut energy = 0.0;
+        for n in 0..self.field.len() {
+            let (left, right, top, bottom) = self.get_star(n);
+            let u_t_2 = self.field_dot[n].powi(2);
+            let u_x_2 = ((right - left) / (2.0 * self.h)).powi(2);
+            let u_y_2 = ((bottom - top) / (2.0 * self.h)).powi(2);
+            energy += u_t_2 + self.c.powi(2) * (u_x_2 + u_y_2);
+        }
+        0.5 * energy
     }
 
     fn init_value_gaus(offset: (f64, f64), init: f64) -> f64 {
@@ -103,6 +81,38 @@ impl Simulation {
         let dist = (offset.0.powi(2) + offset.1.powi(2)).sqrt();
         let exp = -0.5 * ((dist - mu) / sigma).powi(2);
         exp.exp() / (sigma * (2.0 * std::f64::consts::PI).sqrt()) * init
+    }
+
+    fn get_star(&self, n: usize) -> (f64, f64, f64, f64) {
+        let left;
+        if n as u32 % self.x == 0 {
+            left = 0.0;
+        } else {
+            left = self.field[n - 1];
+        }
+
+        let right;
+        if n as u32 % self.x == self.x - 1 {
+            right = 0.0;
+        } else {
+            right = self.field[n + 1];
+        }
+
+        let top;
+        if n as u32 / self.x == 0 {
+            top = 0.0;
+        } else {
+            top = self.field[n - self.x as usize];
+        }
+
+        let bottom;
+        if n as u32 / self.x == self.y - 1 {
+            bottom = 0.0;
+        } else {
+            bottom = self.field[n + self.x as usize];
+        }
+
+        (left, right, top, bottom)
     }
 }
 
