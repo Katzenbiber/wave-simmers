@@ -6,7 +6,6 @@ use winit::{
 };
 use clap::Parser;
 
-mod gen;
 mod simulation;
 mod texture;
 
@@ -83,7 +82,7 @@ async fn main() {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     let window = Window::new(&event_loop).unwrap();
-    window.request_inner_size(winit::dpi::PhysicalSize {
+    let _ = window.request_inner_size(winit::dpi::PhysicalSize {
         width: 1000,
         height: 1000,
     });

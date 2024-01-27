@@ -26,8 +26,7 @@ impl Simulation {
 
             *node = Simulation::init_value_gaus(offset, init)
         }
-        let mut field_dot = vec![0.0; (x * y) as usize];
-        //field_dot[(x * (y / 2) + x / 2) as usize] = 1.0;
+        let field_dot = vec![0.0; (x * y) as usize];
 
         Self {
             field,
