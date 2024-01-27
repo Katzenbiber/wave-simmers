@@ -83,33 +83,29 @@ impl Simulation {
     }
 
     fn get_star(&self, n: usize) -> (f64, f64, f64, f64) {
-        let left;
-        if n as u32 % self.x == 0 {
-            left = 0.0;
+        let left = if n as u32 % self.x == 0 {
+            0.0
         } else {
-            left = self.field[n - 1];
-        }
+            self.field[n - 1]
+        };
 
-        let right;
-        if n as u32 % self.x == self.x - 1 {
-            right = 0.0;
+        let right = if n as u32 % self.x == self.x - 1 {
+            0.0
         } else {
-            right = self.field[n + 1];
-        }
+            self.field[n + 1]
+        };
 
-        let top;
-        if n as u32 / self.x == 0 {
-            top = 0.0;
+        let top = if n as u32 / self.x == 0 {
+            0.0
         } else {
-            top = self.field[n - self.x as usize];
-        }
+            self.field[n - self.x as usize]
+        };
 
-        let bottom;
-        if n as u32 / self.x == self.y - 1 {
-            bottom = 0.0;
+        let bottom = if n as u32 / self.x == self.y - 1 {
+            0.0
         } else {
-            bottom = self.field[n + self.x as usize];
-        }
+            self.field[n + self.x as usize]
+        };
 
         (left, right, top, bottom)
     }

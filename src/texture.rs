@@ -5,7 +5,12 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn test_texture(device: &wgpu::Device, queue: &wgpu::Queue, label: &str, dims: (u32, u32)) -> Self {
+    pub fn test_texture(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        label: &str,
+        dims: (u32, u32),
+    ) -> Self {
         let data = vec![0; (dims.0 * dims.1) as usize];
         let dimensions = (dims.0, dims.1);
 
@@ -34,10 +39,10 @@ impl Texture {
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
-            &*data,
+            &data,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(1 * dimensions.0),
+                bytes_per_row: Some(dimensions.0),
                 rows_per_image: Some(dimensions.1),
             },
             size,

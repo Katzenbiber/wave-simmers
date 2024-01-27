@@ -1,10 +1,10 @@
+use clap::Parser;
 use wgpu::util::DeviceExt;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::Window,
 };
-use clap::Parser;
 
 mod simulation;
 mod texture;
@@ -134,7 +134,8 @@ async fn main() {
     surface.configure(&device, &config);
 
     log::info!("Creating Texture");
-    let diffuse_texture = texture::Texture::test_texture(&device, &queue, "test image", (args.x, args.y));
+    let diffuse_texture =
+        texture::Texture::test_texture(&device, &queue, "test image", (args.x, args.y));
     log::info!("Created Texture");
 
     let texture_bind_group_layout =
@@ -290,7 +291,7 @@ fn render(
     render_pipeline: &wgpu::RenderPipeline,
     diffuse_texture: &texture::Texture,
     diffuse_bind_group: &wgpu::BindGroup,
-    field: &Box<[u8]>,
+    field: &[u8],
     sim_dim: (u32, u32),
     vertex_buffer: &wgpu::Buffer,
     index_buffer: &wgpu::Buffer,
@@ -349,8 +350,8 @@ fn render(
             timestamp_writes: None,
         });
 
-        render_pass.set_pipeline(&render_pipeline);
-        render_pass.set_bind_group(0, &diffuse_bind_group, &[]);
+        render_pass.set_pipeline(render_pipeline);
+        render_pass.set_bind_group(0, diffuse_bind_group, &[]);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         render_pass.draw_indexed(0..num_indices, 0, 0..1);
