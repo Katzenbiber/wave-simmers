@@ -9,7 +9,7 @@ pub struct Simulation {
 }
 
 impl Simulation {
-    pub fn new(args: crate::Args) -> Self {
+    pub fn new(args: &crate::Args) -> Self {
         let timestep = args.timestep;
         let x = args.x;
         let y = args.y;
