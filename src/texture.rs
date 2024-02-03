@@ -11,7 +11,7 @@ impl Texture {
         label: &str,
         dims: (u32, u32),
     ) -> Self {
-        let data = vec![0; (dims.0 * dims.1) as usize];
+        let data = vec![0; (dims.0 * dims.1 * 4) as usize];
         let dimensions = (dims.0, dims.1);
 
         let size = wgpu::Extent3d {
@@ -20,7 +20,7 @@ impl Texture {
             depth_or_array_layers: 1,
         };
 
-        let format = wgpu::TextureFormat::R8Unorm;
+        let format = wgpu::TextureFormat::Rgba8Unorm;
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(label),
             size,
@@ -42,7 +42,7 @@ impl Texture {
             &data,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(dimensions.0),
+                bytes_per_row: Some(dimensions.0 * 4),
                 rows_per_image: Some(dimensions.1),
             },
             size,

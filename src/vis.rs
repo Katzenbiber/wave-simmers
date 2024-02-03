@@ -145,6 +145,7 @@ impl<'window> Visualizer<'window> {
                 label: Some("texture_bind_group_layout"),
             });
 
+        log::info!("Creating Bind Group");
         let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &texture_bind_group_layout,
             entries: &[
@@ -159,6 +160,7 @@ impl<'window> Visualizer<'window> {
             ],
             label: Some("diffuse_bind_group"),
         });
+        log::info!("Created Bind Group");
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -259,6 +261,7 @@ impl<'window> Visualizer<'window> {
             depth_or_array_layers: 1,
         };
 
+        log::debug!("Converting to Texture");
         let texture = self.field2texture(field);
 
         self.queue.write_texture(
@@ -271,7 +274,7 @@ impl<'window> Visualizer<'window> {
             &texture,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(self.dim.0),
+                bytes_per_row: Some(self.dim.0 * 4),
                 rows_per_image: Some(self.dim.1),
             },
             size,
@@ -315,9 +318,13 @@ impl<'window> Visualizer<'window> {
     }
 
     fn field2texture(&self, field: &[f64]) -> Vec<u8> {
-        let mut casted = vec![0; (self.dim.0 * self.dim.1) as usize];
+        let mut casted = vec![0; (self.dim.0 * self.dim.1 * 4) as usize];
         for (n, node) in field.iter().enumerate() {
-            casted[n] = (*node * 100.0) as u8;
+            if *node > 0.0 {
+                casted[n * 4] = (*node * 100.0) as u8;
+            } else {
+                casted[n * 4 + 2] = (*node * -100.0) as u8;
+            }
         }
         casted
     }
