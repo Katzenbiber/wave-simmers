@@ -241,7 +241,7 @@ impl<'window> Visualizer<'window> {
         }
     }
 
-    pub fn render(&self, field: &[u8]) {
+    pub fn render(&self, field: &[f64]) {
         let output = self.surface.get_current_texture().unwrap();
         let view = output
             .texture
@@ -259,6 +259,8 @@ impl<'window> Visualizer<'window> {
             depth_or_array_layers: 1,
         };
 
+        let texture = self.field2texture(field);
+
         self.queue.write_texture(
             wgpu::ImageCopyTexture {
                 aspect: wgpu::TextureAspect::All,
@@ -266,7 +268,7 @@ impl<'window> Visualizer<'window> {
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
-            field,
+            &texture,
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: Some(self.dim.0),
@@ -310,5 +312,13 @@ impl<'window> Visualizer<'window> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
+    }
+
+    fn field2texture(&self, field: &[f64]) -> Vec<u8> {
+        let mut casted = vec![0; (self.dim.0 * self.dim.1) as usize];
+        for (n, node) in field.iter().enumerate() {
+            casted[n] = (*node * 100.0) as u8;
+        }
+        casted
     }
 }

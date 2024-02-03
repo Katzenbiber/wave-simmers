@@ -53,14 +53,9 @@ async fn main() {
             elwt.exit();
         }
         Event::AboutToWait => {
-            let mut casted = vec![0; (sim.x * sim.y) as usize];
+            log::debug!("energy is: {}", &sim.energy());
             let field = sim.multi_step(50);
-            for (n, node) in field.iter().enumerate() {
-                casted[n] = (node.abs() * 100.0) as u8;
-            }
-            let casted = casted.into_boxed_slice();
-            log::debug!("energy is: {}", sim.energy());
-            vis.render(&casted);
+            vis.render(field);
         }
         Event::WindowEvent {
             event: WindowEvent::RedrawRequested,
