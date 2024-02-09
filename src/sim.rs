@@ -1,110 +1,108 @@
 pub struct Simulation {
-    field: Vec<f64>,
-    field_dot: Vec<f64>,
-    timestep: f64,
-    pub x: u32,
-    pub y: u32,
+    size: (f64, f64),
+    discretization: u32,
+    u_n: Vec<f64>,
+    u_nm1: Vec<f64>,
     c: f64,
-    h: f64,
+    t: f64,
 }
 
 impl Simulation {
     pub fn new(args: &crate::Args) -> Self {
-        let timestep = args.timestep;
-        let x = args.x;
-        let y = args.y;
-        let init = args.init;
-        let c = args.c;
-
-        let mut field = vec![0.0; (x * y) as usize];
-        let center = (x as i32 / 2, y as i32 / 2);
-        log::debug!("center: {center:?}");
-        for (n, node) in field.iter_mut().enumerate() {
-            let row = n as i32 / x as i32;
-            let col = n as i32 % x as i32;
-            let offset = ((col - center.0) as f64, (row - center.1) as f64);
-
-            *node = Simulation::init_value_gaus(offset, init)
-        }
-        let field_dot = vec![0.0; (x * y) as usize];
+        let size = (args.x, args.y);
+        let u_n = vec![0.0; (args.discretization * args.discretization) as usize];
+        // let u_n = Self::init_value_gauss(size, args.discretization);
+        let u_nm1 = vec![0.0; (args.discretization * args.discretization) as usize];
 
         Self {
-            field,
-            field_dot,
-            timestep,
-            x,
-            y,
-            c,
-            h: 1.0 / x as f64,
+            size,
+            discretization: args.discretization,
+            u_n,
+            u_nm1,
+            c: args.c,
+            t: 0.0,
         }
     }
 
-    pub fn multi_step(&mut self, n: u32) -> &Vec<f64> {
+    pub fn multi_step(&mut self, n: u32, dt: f64) -> &Vec<f64> {
         for _ in 0..n - 1 {
-            let _ = self.step();
+            let _ = self.step(dt);
         }
-        self.step()
+        self.step(dt)
     }
 
-    pub fn step(&mut self) -> &Vec<f64> {
-        let field_dot = self.field_dot.clone();
-        for (n, node) in self.field.clone().iter().enumerate() {
-            let (left, right, top, bottom) = self.get_star(n);
+    pub fn step(&mut self, dt: f64) -> &Vec<f64> {
+        let c = self.c;
+        let mut u_np1 = vec![0.0; (self.discretization * self.discretization) as usize];
 
-            let u_ddx = (left - 2.0 * *node + right) / self.h.powi(2);
-            let u_ddy = (top - 2.0 * *node + bottom) / self.h.powi(2);
-
-            let u_ddot = self.c.powi(2) * (u_ddx + u_ddy);
-            self.field_dot[n] = field_dot[n] + u_ddot * self.timestep;
-            self.field[n] = node + field_dot[n] * self.timestep;
+        for i in 0..self.u_n.len() {
+            let (left, right, top, bottom) = self.get_star(i);
+            let uxx = (left - 2.0 * self.u_n[i] + right)
+                / (self.size.0 / self.discretization as f64).powi(2);
+            let uyy = (top - 2.0 * self.u_n[i] + bottom)
+                / (self.size.1 / self.discretization as f64).powi(2);
+            let laplacian = uxx + uyy;
+            u_np1[i] = 2.0 * self.u_n[i] - self.u_nm1[i] + c.powi(2) * dt.powi(2) * laplacian;
         }
-        &self.field
+
+        let center = (self.discretization * self.discretization / 2 + self.discretization / 2) as usize;
+        u_np1[center] = (self.t * 5.0).sin();
+
+        self.u_nm1 = self.u_n.clone();
+        self.u_n = u_np1;
+        self.t += dt;
+        &self.u_n
     }
 
     pub fn energy(&self) -> f64 {
-        let mut energy = 0.0;
-        for n in 0..self.field.len() {
-            let (left, right, top, bottom) = self.get_star(n);
-            let u_t_2 = self.field_dot[n].powi(2);
-            let u_x_2 = ((right - left) / (2.0 * self.h)).powi(2);
-            let u_y_2 = ((bottom - top) / (2.0 * self.h)).powi(2);
-            energy += u_t_2 + self.c.powi(2) * (u_x_2 + u_y_2);
-        }
-        0.5 * energy
+        self.u_n.iter().map(|x| x.abs().powi(2)).sum()
     }
 
-    fn init_value_gaus(offset: (f64, f64), init: f64) -> f64 {
-        let mu = 0.0;
-        let sigma = 4.0;
+    pub fn time(&self) -> f64 {
+        self.t
+    }
 
-        let dist = (offset.0.powi(2) + offset.1.powi(2)).sqrt();
-        let exp = -0.5 * ((dist - mu) / sigma).powi(2);
-        exp.exp() / (sigma * (2.0 * std::f64::consts::PI).sqrt()) * init
+    fn init_value_gauss(size: (f64, f64), disc: u32) -> Vec<f64> {
+        let mu = 0.0;
+        let sigma = 5.0;
+        let mut u = vec![0.0; (disc * disc) as usize];
+        for i in 0..(disc * disc) {
+            let x = (i % disc) as f64 * size.0 / disc as f64;
+            let y = (i / disc) as f64 * size.1 / disc as f64;
+            let dist_from_center = ((x - size.0 / 2.0).powi(2) + (y - size.1 / 2.0).powi(2)).sqrt();
+            u[i as usize] = Self::gauss(dist_from_center, mu, sigma) * 0.001;
+        }
+        u
+    }
+
+    fn gauss(x: f64, mu: f64, sigma: f64) -> f64 {
+        let exp = -(x - mu).powi(2) / (2.0 * sigma.powi(2));
+        exp.exp() / (sigma * (2.0 * std::f64::consts::PI).sqrt())
     }
 
     fn get_star(&self, n: usize) -> (f64, f64, f64, f64) {
-        let left = if n as u32 % self.x == 0 {
+        let left = if n as u32 % self.discretization == 0 {
             0.0
         } else {
-            self.field[n - 1]
+            self.u_n[n - 1]
         };
 
-        let right = if n as u32 % self.x == self.x - 1 {
+        let right = if n as u32 % self.discretization == self.discretization - 1 {
             0.0
         } else {
-            self.field[n + 1]
+            self.u_n[n + 1]
         };
 
-        let top = if n as u32 / self.x == 0 {
+        let top = if n as u32 / self.discretization == 0 {
             0.0
         } else {
-            self.field[n - self.x as usize]
+            self.u_n[n - self.discretization as usize]
         };
 
-        let bottom = if n as u32 / self.x == self.y - 1 {
+        let bottom = if n as u32 / self.discretization == self.discretization - 1 {
             0.0
         } else {
-            self.field[n + self.x as usize]
+            self.u_n[n + self.discretization as usize]
         };
 
         (left, right, top, bottom)
@@ -116,13 +114,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_gaus() {
-        let left = (-1.0, 0.0);
-        let right = (1.0, 0.0);
-        let init = 1.0;
-        assert_eq!(
-            Simulation::init_value_gaus(left, init),
-            Simulation::init_value_gaus(right, init)
-        );
+    fn test_gauss() {
+        assert_eq!(Simulation::gauss(0.0, 0.0, 1.0), 0.3989422804014327);
+        assert_eq!(Simulation::gauss(1.0, 0.0, 1.0), 0.24197072451914337);
+    }
+
+    #[test]
+    fn test_get_star() {
+        let sim = Simulation {
+            size: (1.0, 1.0),
+            discretization: 3,
+            u_n: vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            u_nm1: vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            c: 1.0,
+            t: 0.0,
+        };
+
+        assert_eq!(sim.get_star(0), (0.0, 1.0, 0.0, 3.0));
+        assert_eq!(sim.get_star(1), (0.0, 2.0, 0.0, 4.0));
+        assert_eq!(sim.get_star(2), (1.0, 0.0, 0.0, 5.0));
+        assert_eq!(sim.get_star(3), (0.0, 4.0, 0.0, 6.0));
+        assert_eq!(sim.get_star(4), (3.0, 5.0, 1.0, 7.0));
+        assert_eq!(sim.get_star(5), (4.0, 0.0, 2.0, 8.0));
+        assert_eq!(sim.get_star(6), (0.0, 7.0, 3.0, 0.0));
+        assert_eq!(sim.get_star(7), (6.0, 8.0, 4.0, 0.0));
+        assert_eq!(sim.get_star(8), (7.0, 0.0, 5.0, 0.0));
     }
 }

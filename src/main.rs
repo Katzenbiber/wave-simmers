@@ -11,16 +11,21 @@ mod vis;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long, default_value_t = 0.0001)]
-    timestep: f64,
-    #[arg(short, long, default_value_t = 100)]
-    x: u32,
-    #[arg(short, long, default_value_t = 100)]
-    y: u32,
-    #[arg(short, long, default_value_t = 0.01)]
+    /// Number of grid points in each dimension
+    #[arg(short, long, default_value_t = 1000)]
+    discretization: u32,
+    /// Height of simulation in m
+    #[arg(short, long, default_value_t = 10.0)]
+    x: f64,
+    /// Width of simulation in m
+    #[arg(short, long, default_value_t = 10.0)]
+    y: f64,
+    /// Speed of wave in m/s
+    #[arg(short, long, default_value_t = 1.0)]
     c: f64,
-    #[arg(short, long, default_value_t = 25.0)]
-    init: f64,
+    /// Time step in seconds
+    #[arg(long, default_value_t = 1e-3)]
+    dt: f64,
 }
 
 #[pollster::main]
@@ -41,7 +46,7 @@ async fn main() {
     log::info!("Created Simulation");
 
     log::info!("Creating Visualizer");
-    let vis = vis::Visualizer::new(&window, (args.x, args.y)).await;
+    let vis = vis::Visualizer::new(&window, (args.discretization, args.discretization)).await;
     log::info!("Created Visualizer");
 
     let _ = event_loop.run(move |event, elwt| match event {
@@ -53,8 +58,8 @@ async fn main() {
             elwt.exit();
         }
         Event::AboutToWait => {
-            log::debug!("energy is: {}", &sim.energy());
-            let field = sim.multi_step(50);
+            log::debug!("sim time: {:.4e} | energy: {:.4e}", &sim.time(), &sim.energy());
+            let field = sim.multi_step(1, args.dt);
             vis.render(field);
         }
         Event::WindowEvent {
