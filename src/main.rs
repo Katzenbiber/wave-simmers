@@ -1,7 +1,8 @@
 use clap::Parser;
 use winit::{
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::EventLoop,
+    keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
@@ -49,6 +50,8 @@ async fn main() {
     let vis = vis::Visualizer::new(&window, (args.discretization, args.discretization)).await;
     log::info!("Created Visualizer");
 
+    let mut steps_per_frame = 1;
+
     let _ = event_loop.run(move |event, elwt| match event {
         Event::WindowEvent {
             event: WindowEvent::CloseRequested,
@@ -58,14 +61,41 @@ async fn main() {
             elwt.exit();
         }
         Event::AboutToWait => {
-            log::debug!("sim time: {:.4e} | energy: {:.4e}", &sim.time(), &sim.energy());
-            let field = sim.multi_step(1, args.dt);
+            log::debug!(
+                "sim time: {:.4e} | energy: {:.4e}",
+                &sim.time(),
+                &sim.energy()
+            );
+            let field = sim.multi_step(steps_per_frame, args.dt);
             vis.render(field);
         }
         Event::WindowEvent {
             event: WindowEvent::RedrawRequested,
             ..
         } => {}
+        Event::WindowEvent {
+            event:
+                WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            state: ElementState::Pressed,
+                            physical_key: PhysicalKey::Code(code),
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } => match code {
+            KeyCode::ArrowUp => {
+                steps_per_frame += 1;
+                log::info!("steps_per_frame: {}", steps_per_frame);
+            }
+            KeyCode::ArrowDown => {
+                steps_per_frame -= 1;
+                log::info!("steps_per_frame: {}", steps_per_frame);
+            }
+            _ => (),
+        },
         _ => (),
     });
 }
