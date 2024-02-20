@@ -46,8 +46,17 @@ async fn main() {
     let mut sim = sim::Simulation::new(&args);
     log::info!("Created Simulation");
 
+    let vis_settings = vis::Settings {
+        colors: (wgpu::Color::BLUE, wgpu::Color::RED),
+    };
+
     log::info!("Creating Visualizer");
-    let vis = vis::Visualizer::new(&window, (args.discretization, args.discretization)).await;
+    let vis = vis::Visualizer::new(
+        &window,
+        (args.discretization, args.discretization),
+        vis_settings,
+    )
+    .await;
     log::info!("Created Visualizer");
 
     let mut steps_per_frame = 1;

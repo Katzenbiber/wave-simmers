@@ -60,6 +60,11 @@ pub struct Visualizer<'window> {
     diffuse_texture: texture::Texture,
     dim: (u32, u32),
     pipeline: GraphicsPipeline,
+    settings: Settings,
+}
+
+pub struct Settings {
+    pub colors: (wgpu::Color, wgpu::Color),
 }
 
 struct GraphicsPipeline {
@@ -70,7 +75,11 @@ struct GraphicsPipeline {
 }
 
 impl<'window> Visualizer<'window> {
-    pub async fn new(window: &'window winit::window::Window, dim: (u32, u32)) -> Self {
+    pub async fn new(
+        window: &'window winit::window::Window,
+        dim: (u32, u32),
+        settings: Settings,
+    ) -> Self {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
         let surface = instance.create_surface(window).unwrap();
 
@@ -240,6 +249,7 @@ impl<'window> Visualizer<'window> {
                 vertex_buffer,
                 index_buffer,
             },
+            settings,
         }
     }
 
@@ -320,11 +330,28 @@ impl<'window> Visualizer<'window> {
     fn field2texture(&self, field: &[f64]) -> Vec<u8> {
         let mut casted = vec![0; (self.dim.0 * self.dim.1 * 4) as usize];
         for (n, node) in field.iter().enumerate() {
-            if *node > 0.0 {
-                casted[n * 4] = (*node * 100.0) as u8;
+            // translate to rgba values
+            let low = self.settings.colors.0;
+            let high = self.settings.colors.1;
+
+            let r;
+            let g;
+            let b;
+            if *node < 0.0 {
+                // interpolate between low and 0
+                r = node.abs() * low.r * 255.0;
+                g = node.abs() * low.g * 255.0;
+                b = node.abs() * low.b * 255.0;
             } else {
-                casted[n * 4 + 2] = (*node * -100.0) as u8;
+                // interpolate between 0 and high
+                r = node.abs() * high.r * 255.0;
+                g = node.abs() * high.g * 255.0;
+                b = node.abs() * high.b * 255.0;
             }
+
+            casted[n * 4] = r as u8;
+            casted[n * 4 + 1] = g as u8;
+            casted[n * 4 + 2] = b as u8;
         }
         casted
     }
