@@ -65,6 +65,7 @@ pub struct Visualizer<'window> {
 
 pub struct Settings {
     pub colors: (wgpu::Color, wgpu::Color),
+    pub clamp: f64,
 }
 
 struct GraphicsPipeline {
@@ -333,20 +334,21 @@ impl<'window> Visualizer<'window> {
             // translate to rgba values
             let low = self.settings.colors.0;
             let high = self.settings.colors.1;
+            let factor = 1.0 / self.settings.clamp;
 
             let r;
             let g;
             let b;
             if *node < 0.0 {
                 // interpolate between low and 0
-                r = node.abs() * low.r * 255.0;
-                g = node.abs() * low.g * 255.0;
-                b = node.abs() * low.b * 255.0;
+                r = factor * node.abs() * low.r * 255.0;
+                g = factor * node.abs() * low.g * 255.0;
+                b = factor * node.abs() * low.b * 255.0;
             } else {
                 // interpolate between 0 and high
-                r = node.abs() * high.r * 255.0;
-                g = node.abs() * high.g * 255.0;
-                b = node.abs() * high.b * 255.0;
+                r = factor * node.abs() * high.r * 255.0;
+                g = factor * node.abs() * high.g * 255.0;
+                b = factor * node.abs() * high.b * 255.0;
             }
 
             casted[n * 4] = r as u8;
