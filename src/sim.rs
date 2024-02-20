@@ -45,8 +45,8 @@ impl Simulation {
             u_np1[i] = 2.0 * self.u_n[i] - self.u_nm1[i] + c.powi(2) * dt.powi(2) * laplacian;
         }
 
-        let center =
-            (self.discretization * self.discretization / 2 + self.discretization / 2) as usize;
+        let center = self.discretization as usize * (self.discretization as usize / 2)
+            + self.discretization as usize / 2;
         u_np1[center] = (self.t * 5.0).sin();
 
         self.u_nm1 = self.u_n.clone();
