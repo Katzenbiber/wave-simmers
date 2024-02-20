@@ -101,6 +101,9 @@ async fn main() {
                 log::info!("steps_per_frame: {}", steps_per_frame);
             }
             KeyCode::ArrowDown => {
+                if steps_per_frame == 1 {
+                    return;
+                }
                 steps_per_frame -= 1;
                 log::info!("steps_per_frame: {}", steps_per_frame);
             }
