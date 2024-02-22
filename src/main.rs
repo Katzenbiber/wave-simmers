@@ -52,7 +52,7 @@ async fn main() {
     };
 
     log::info!("Creating Visualizer");
-    let vis = vis::Visualizer::new(
+    let mut vis = vis::Visualizer::new(
         &window,
         (args.discretization, args.discretization),
         vis_settings,
@@ -83,6 +83,12 @@ async fn main() {
             event: WindowEvent::RedrawRequested,
             ..
         } => {}
+        Event::WindowEvent {
+            event: WindowEvent::Resized(physical_size),
+            ..
+        } => {
+            vis.resize(physical_size);
+        }
         Event::WindowEvent {
             event:
                 WindowEvent::KeyboardInput {

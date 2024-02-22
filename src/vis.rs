@@ -61,6 +61,7 @@ pub struct Visualizer<'window> {
     dim: (u32, u32),
     pipeline: GraphicsPipeline,
     settings: Settings,
+    config: wgpu::SurfaceConfiguration,
 }
 
 pub struct Settings {
@@ -251,6 +252,7 @@ impl<'window> Visualizer<'window> {
                 index_buffer,
             },
             settings,
+            config,
         }
     }
 
@@ -326,6 +328,12 @@ impl<'window> Visualizer<'window> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
+    }
+
+    pub fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+        self.config.width = size.width;
+        self.config.height = size.height;
+        self.surface.configure(&self.device, &self.config);
     }
 
     fn field2texture(&self, field: &[f64]) -> Vec<u8> {
