@@ -37,10 +37,12 @@ async fn main() {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     let window = Window::new(&event_loop).unwrap();
-    let _ = window.request_inner_size(winit::dpi::PhysicalSize {
-        width: 1000,
-        height: 1000,
-    });
+
+    let aspect_ratio = args.x / args.y;
+    let height = 1000;
+    let width = (height as f64 * aspect_ratio) as u32;
+
+    let _ = window.request_inner_size(winit::dpi::PhysicalSize { width, height });
 
     log::info!("Creating Simulation");
     let mut sim = sim::Simulation::new(&args);
