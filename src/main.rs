@@ -51,6 +51,7 @@ async fn main() {
     let vis_settings = vis::Settings {
         colors: (wgpu::Color::BLUE, wgpu::Color::RED),
         clamp: 1.0,
+        aspect_ratio,
     };
 
     log::info!("Creating Visualizer");

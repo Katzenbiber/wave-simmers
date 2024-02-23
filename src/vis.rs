@@ -67,6 +67,7 @@ pub struct Visualizer<'window> {
 pub struct Settings {
     pub colors: (wgpu::Color, wgpu::Color),
     pub clamp: f64,
+    pub aspect_ratio: f64,
 }
 
 struct GraphicsPipeline {
@@ -334,6 +335,47 @@ impl<'window> Visualizer<'window> {
         self.config.width = size.width;
         self.config.height = size.height;
         self.surface.configure(&self.device, &self.config);
+
+        // calculate new vertices to keep aspect ratio
+        // simulation aspect ratio
+        let sim_ar = self.settings.aspect_ratio as f32;
+        // window aspect ratio
+        let win_ar = size.width as f32 / size.height as f32;
+
+        let (horizontal, vertical) = if sim_ar < win_ar {
+            (sim_ar / win_ar, 1.0)
+        } else {
+            (1.0, win_ar / sim_ar)
+        };
+
+        // construct vertices
+        let vertices = &[
+            Vertex {
+                position: [-horizontal, vertical],
+                tex_coords: [0.0, 0.0],
+            }, // A
+            Vertex {
+                position: [-horizontal, -vertical],
+                tex_coords: [0.0, 1.0],
+            }, // B
+            Vertex {
+                position: [horizontal, vertical],
+                tex_coords: [1.0, 0.0],
+            }, // C
+            Vertex {
+                position: [horizontal, -vertical],
+                tex_coords: [1.0, 1.0],
+            }, // D
+        ];
+
+        let vertex_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+        self.pipeline.vertex_buffer = vertex_buffer;
     }
 
     fn field2texture(&self, field: &[f64]) -> Vec<u8> {
