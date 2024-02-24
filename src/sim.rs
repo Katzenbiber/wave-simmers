@@ -5,6 +5,14 @@ pub struct Simulation {
     u_nm1: Vec<f64>,
     c: f64,
     t: f64,
+    boundary_condition: BoundaryCondition,
+}
+
+pub enum BoundaryCondition {
+    Dirichlet,
+    Neumann,
+    Periodic,
+    Absorbing,
 }
 
 impl Simulation {
@@ -21,6 +29,7 @@ impl Simulation {
             u_nm1,
             c: args.c,
             t: 0.0,
+            boundary_condition: BoundaryCondition::Dirichlet,
         }
     }
 
@@ -83,30 +92,39 @@ impl Simulation {
 
     fn get_star(&self, n: usize) -> (f64, f64, f64, f64) {
         let left = if n as u32 % self.discretization == 0 {
-            0.0
+            self.get_boundary_value(n)
         } else {
             self.u_n[n - 1]
         };
 
         let right = if n as u32 % self.discretization == self.discretization - 1 {
-            0.0
+            self.get_boundary_value(n)
         } else {
             self.u_n[n + 1]
         };
 
         let top = if n as u32 / self.discretization == 0 {
-            0.0
+            self.get_boundary_value(n)
         } else {
             self.u_n[n - self.discretization as usize]
         };
 
         let bottom = if n as u32 / self.discretization == self.discretization - 1 {
-            0.0
+            self.get_boundary_value(n)
         } else {
             self.u_n[n + self.discretization as usize]
         };
 
         (left, right, top, bottom)
+    }
+
+    fn get_boundary_value(&self, n: usize) -> f64 {
+        match self.boundary_condition {
+            BoundaryCondition::Dirichlet => 0.0,
+            BoundaryCondition::Neumann => self.u_n[n],
+            BoundaryCondition::Periodic => todo!(),
+            BoundaryCondition::Absorbing => todo!(),
+        }
     }
 }
 
@@ -129,6 +147,7 @@ mod tests {
             u_nm1: vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             c: 1.0,
             t: 0.0,
+            boundary_condition: BoundaryCondition::Dirichlet,
         };
 
         assert_eq!(sim.get_star(0), (0.0, 1.0, 0.0, 3.0));
