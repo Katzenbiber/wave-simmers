@@ -15,6 +15,13 @@ pub enum BoundaryCondition {
     Absorbing,
 }
 
+enum Direction {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
 impl Simulation {
     pub fn new(args: &crate::Args) -> Self {
         let size = (args.x, args.y);
@@ -92,25 +99,25 @@ impl Simulation {
 
     fn get_star(&self, n: usize) -> (f64, f64, f64, f64) {
         let left = if n as u32 % self.discretization == 0 {
-            self.get_boundary_value(n)
+            self.get_boundary_value(n, Direction::Left)
         } else {
             self.u_n[n - 1]
         };
 
         let right = if n as u32 % self.discretization == self.discretization - 1 {
-            self.get_boundary_value(n)
+            self.get_boundary_value(n, Direction::Right)
         } else {
             self.u_n[n + 1]
         };
 
         let top = if n as u32 / self.discretization == 0 {
-            self.get_boundary_value(n)
+            self.get_boundary_value(n, Direction::Top)
         } else {
             self.u_n[n - self.discretization as usize]
         };
 
         let bottom = if n as u32 / self.discretization == self.discretization - 1 {
-            self.get_boundary_value(n)
+            self.get_boundary_value(n, Direction::Bottom)
         } else {
             self.u_n[n + self.discretization as usize]
         };
@@ -118,11 +125,20 @@ impl Simulation {
         (left, right, top, bottom)
     }
 
-    fn get_boundary_value(&self, n: usize) -> f64 {
+    fn get_boundary_value(&self, n: usize, dir: Direction) -> f64 {
         match self.boundary_condition {
             BoundaryCondition::Dirichlet => 0.0,
             BoundaryCondition::Neumann => self.u_n[n],
-            BoundaryCondition::Periodic => todo!(),
+            BoundaryCondition::Periodic => match dir {
+                Direction::Left => self.u_n[n + self.discretization as usize - 1],
+                Direction::Right => self.u_n[n - self.discretization as usize + 1],
+                Direction::Top => {
+                    self.u_n[n + self.discretization as usize * (self.discretization as usize - 1)]
+                }
+                Direction::Bottom => {
+                    self.u_n[n - self.discretization as usize * (self.discretization as usize - 1)]
+                }
+            },
             BoundaryCondition::Absorbing => todo!(),
         }
     }
